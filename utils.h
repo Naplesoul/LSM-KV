@@ -10,7 +10,8 @@
 #include <stdio.h>
 #include <io.h>
 #include <windows.h>
-#else
+#endif
+#if defined(linux) || defined(__MINGW32__) || defined(__APPLE__)
 #include <dirent.h>
 #include <unistd.h>
 #endif
@@ -33,7 +34,7 @@ namespace utils{
      * @param ret all files name in directory.
      * @return files number.
      */
-    #ifdef _WIN32
+    #if defined(_WIN32) && !defined(__MINGW32__) 
     int scanDir(std::string path, std::vector<std::string> &ret){
         std::string extendPath;
         if(path[path.size() - 1] == '/'){
@@ -58,7 +59,8 @@ namespace utils{
         }
         return ret.size();
     }
-    #else
+    #endif
+    #if defined(linux) || defined(__MINGW32__) || defined(__APPLE__)
     int scanDir(std::string path, std::vector<std::string> &ret){
         DIR *dir;
         struct dirent *rent;
