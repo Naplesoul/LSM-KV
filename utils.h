@@ -44,7 +44,7 @@ namespace utils{
             extendPath = path + "/*";
         }
         WIN32_FIND_DATA fd;
-        HANDLE h = FindFirstFile(extendPath.c_str(), &fd);
+        HANDLE h = FindFirstFileA(extendPath.c_str(), &fd);
         if(h == INVALID_HANDLE_VALUE){
             return 0;
         }

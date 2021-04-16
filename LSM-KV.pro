@@ -8,6 +8,8 @@ CONFIG -= app_bundle
 #DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000    # disables all the APIs deprecated before Qt 6.0.0
 
 SOURCES += \
+        SSTable.cpp \
+        SkipList.cpp \
         correctness.cc \
         kvstore.cc \
         persistence.cc
@@ -19,7 +21,9 @@ else: unix:!android: target.path = /opt/$${TARGET}/bin
 
 HEADERS += \
     BloomFilter.h \
+    DataStructs.h \
     MurmurHash3.h \
+    SSTable.h \
     SkipList.h \
     kvstore.h \
     kvstore_api.h \

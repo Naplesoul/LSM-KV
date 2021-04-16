@@ -6,7 +6,8 @@
 class KVStore : public KVStoreAPI {
 	// You can add your implementation here
 private:
-    SkipList<uint64_t, std::string> memTable;
+    SkipList *memTable;
+
 public:
 	KVStore(const std::string &dir);
 

@@ -3,10 +3,12 @@
 
 KVStore::KVStore(const std::string &dir): KVStoreAPI(dir)
 {
+    memTable = new SkipList();
 }
 
 KVStore::~KVStore()
 {
+    delete memTable;
 }
 
 /**
@@ -15,7 +17,7 @@ KVStore::~KVStore()
  */
 void KVStore::put(uint64_t key, const std::string &s)
 {
-    memTable.put(key, s);
+    memTable->put(key, s);
 }
 /**
  * Returns the (string) value of the given key.
@@ -23,7 +25,7 @@ void KVStore::put(uint64_t key, const std::string &s)
  */
 std::string KVStore::get(uint64_t key)
 {
-    std::string *val = memTable.get(key);
+    std::string *val = memTable->get(key);
     if(val)
         return *val;
     else
@@ -35,7 +37,7 @@ std::string KVStore::get(uint64_t key)
  */
 bool KVStore::del(uint64_t key)
 {
-    return memTable.remove(key);
+    return memTable->remove(key);
 }
 
 /**
@@ -44,5 +46,6 @@ bool KVStore::del(uint64_t key)
  */
 void KVStore::reset()
 {
-    memTable.clear();
+    delete memTable;
+    memTable = new SkipList();
 }
