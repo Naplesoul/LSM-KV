@@ -1,8 +1,41 @@
 #include "kvstore.h"
+#include "utils.h"
 #include <string>
+#include <algorithm>
+
 
 KVStore::KVStore(const std::string &dir): KVStoreAPI(dir)
 {
+    currentTime = 0;
+    // load cache from existed SSTables
+    if (utils::dirExists(dir)) {
+        std::vector<std::string> levelDirs;
+        int levelNum = utils::scanDir(dir, levelDirs);
+        if (levelNum > 0) {
+            for(int i = 0; i < levelNum; ++i) {
+                std::string levelName = "level-" + std::to_string(i);
+                if(std::count(levelDirs.begin(), levelDirs.end(), levelName) == 1) {
+                    cache.push_back(std::vector<SSTableCache*>());
+                    tableCount.push_back(0);
+                    std::string levelDir = dir[dir.size()] == '/' ? dir + levelName : dir + "/" + levelName;
+                    std::vector<std::string> tableDirs;
+                    int tableNum = utils::scanDir(levelDir, tableDirs);
+                    tableCount[i] = tableNum;
+                    for(int j = 0; j < tableNum; ++j) {
+                        SSTableCache* curCache = new SSTableCache(levelDir + "/" + tableDirs[j]);
+                        uint64_t curTime = curCache->timeStamp();
+                        cache[i].push_back(curCache);
+                        if(curTime > currentTime)
+                            currentTime = curTime;
+                    }
+                } else
+                    break;
+            }
+        }
+    } else {
+        utils::mkdir(dir.c_str());
+    }
+    currentTime++;
     memTable = new SkipList();
 }
 

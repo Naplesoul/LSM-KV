@@ -2,12 +2,17 @@
 
 #include "kvstore_api.h"
 #include "SkipList.h"
+#include "SSTable.h"
+#include <vector>
 
 class KVStore : public KVStoreAPI {
 	// You can add your implementation here
 private:
     SkipList *memTable;
-
+    std::vector<std::vector<SSTableCache*>> cache;
+    uint64_t currentTime;
+    std::vector<uint32_t> tableCount;
+    void saveMemTable();
 public:
 	KVStore(const std::string &dir);
 

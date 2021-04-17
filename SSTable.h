@@ -24,4 +24,18 @@ public:
 };
 
 
+class SSTableCache
+{
+private:
+    Header header;
+    BloomFilter *bloomFilter;
+    std::vector<Index> indexes;
+    std::string path;
+public:
+    SSTableCache(const SSTable &table);
+    SSTableCache(const std::string &dir);
+    uint64_t timeStamp(){return header.timeStamp;}
+};
+
+
 #endif // SSTABLE_H

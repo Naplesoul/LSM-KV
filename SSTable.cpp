@@ -18,3 +18,9 @@ SSTable::SSTable(Node* head)
         cur = cur->right;
     }
 }
+
+
+SSTableCache::SSTableCache(const std::string &dir)
+{
+    path = dir;
+}

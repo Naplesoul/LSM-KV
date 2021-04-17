@@ -8,8 +8,6 @@
 
 #include "DataStructs.h"
 
-
-
 class SkipList
 {
 private:
