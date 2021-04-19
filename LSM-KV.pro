@@ -11,9 +11,9 @@ SOURCES += \
         BloomFilter.cpp \
         SSTable.cpp \
         SkipList.cpp \
-        correctness.cc \
         kvstore.cc \
-        persistence.cc
+        myTest.cpp
+
 
 # Default rules for deployment.
 qnx: target.path = /tmp/$${TARGET}/bin

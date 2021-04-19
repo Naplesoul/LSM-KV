@@ -1,5 +1,6 @@
 #include "BloomFilter.h"
 #include "MurmurHash3.h"
+#include <string.h>
 
 void BloomFilter::add(const uint64_t &key)
 {
@@ -19,4 +20,9 @@ bool BloomFilter::contains(const uint64_t &key)
             && bitSet[hashVal[1] % FILTER_SIZE] == 1
             && bitSet[hashVal[2] % FILTER_SIZE] == 1
             && bitSet[hashVal[3] % FILTER_SIZE] == 1);
+}
+
+void BloomFilter::save2Buffer(char *buf)
+{
+    strncpy(buf, bitSet.to_string().c_str(), FILTER_SIZE/8);
 }

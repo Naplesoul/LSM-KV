@@ -7,6 +7,7 @@
 #include <string>
 
 #include "DataStructs.h"
+#include "SSTable.h"
 
 class SkipList
 {
@@ -28,6 +29,7 @@ public:
     // 返回是否成功删除（原表中是否有该key）
     bool remove(const uint64_t &key);
     Node* getListHead();
+    SSTableCache *save2SSTable(const std::string &dir, const uint64_t &currentTime);
 };
 
 #endif // SKIPLIST_H

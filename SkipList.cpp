@@ -1,4 +1,8 @@
 #include "SkipList.h"
+#include "BloomFilter.h"
+#include <fstream>
+#include <stdlib.h>
+#include <string.h>
 
 SkipList::SkipList(std::vector<Entry> entrys)
 {
@@ -97,8 +101,8 @@ bool SkipList::put(const uint64_t &key, const std::string &val)
         head->down = oldHead;
     }
     ++listLength;
-    // 加一个key、一个offset、一个string和它最后的\n的大小
-    listSize += 13 + val.size();
+    // 加一个key、一个offset、一个string的大小
+    listSize += 12 + val.size();
     return false;
 }
 
@@ -114,5 +118,58 @@ Node *SkipList::getListHead()
     while(cur->down) {
         cur = cur->down;
     }
-    return cur;
+    return cur->right;
+}
+
+SSTableCache *SkipList::save2SSTable(const std::string &dir, const uint64_t &currentTime)
+{
+
+    SSTableCache *cache = new SSTableCache;
+
+    Node *cur = getListHead();
+    char *buffer = new char[listSize];
+    BloomFilter *filter = cache->bloomFilter;
+
+    *(uint64_t*)buffer = currentTime;
+    (cache->header).timeStamp = currentTime;
+
+    *(uint64_t*)(buffer + 8) = listLength;
+    (cache->header).size = listLength;
+
+    *(uint64_t*)(buffer + 16) = cur->key;
+    (cache->header).minKey = cur->key;
+
+    char *index = buffer + 10272;
+    uint32_t offset = 10272 + listLength * 12;
+    while(true) {
+        filter->add(cur->key);
+        *(uint64_t*)index = cur->key;
+        index += 8;
+        *(uint32_t*)index = offset;
+        index += 4;
+
+        (cache->indexes).push_back(Index(cur->key, offset));
+        uint32_t newOffset = offset + (cur->val).size();
+        if(newOffset > listSize) {
+            printf("Buffer Overflow!!!\n");
+            exit(-1);
+        }
+        strcpy(buffer + offset, (cur->val).c_str());
+        offset = newOffset;
+        if(cur->right)
+            cur = cur->right;
+        else
+            break;
+    }
+    *(uint64_t*)(buffer + 24) = cur->key;
+    (cache->header).maxKey = cur->key;
+    filter->save2Buffer(buffer + 32);
+
+    std::string filename = dir + "/" + std::to_string(currentTime) + ".sst";
+    cache->path = filename;
+    std::ofstream outFile(filename, std::ios::binary | std::ios::out);
+    outFile.write(buffer, listSize);
+
+    delete[] buffer;
+    return cache;
 }

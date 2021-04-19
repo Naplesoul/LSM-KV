@@ -14,6 +14,7 @@ public:
     BloomFilter() {bitSet.reset();}
     void add(const uint64_t &key);
     bool contains(const uint64_t &key);
+    void save2Buffer(char* buf);
 };
 
 

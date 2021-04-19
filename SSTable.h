@@ -15,7 +15,7 @@ private:
     std::vector<Index> indexes;
     std::vector<std::string> values;
 public:
-    SSTable(){bloomFilter = new BloomFilter();}
+    SSTable(): bloomFilter(new BloomFilter()) {}
     SSTable(Node* head);
 
     bool load(const std::string &dir);
@@ -26,16 +26,19 @@ public:
 
 class SSTableCache
 {
-private:
+public:
     Header header;
     BloomFilter *bloomFilter;
     std::vector<Index> indexes;
     std::string path;
-public:
-    SSTableCache(const SSTable &table);
+    SSTableCache(): bloomFilter(new BloomFilter()) {}
     SSTableCache(const std::string &dir);
-    uint64_t timeStamp(){return header.timeStamp;}
+
+    int get(const uint64_t &key);
+    int find(const uint64_t &key, int start, int end);
 };
+
+bool timeCmp(SSTableCache *a, SSTableCache *b);
 
 
 #endif // SSTABLE_H
