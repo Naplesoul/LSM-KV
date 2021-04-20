@@ -2,6 +2,8 @@
 #include "utils.h"
 #include <string>
 #include <algorithm>
+#include <fstream>
+#include <iostream>
 
 #define MAX_TABLE_SIZE 2097152
 
@@ -51,7 +53,10 @@ KVStore::KVStore(const std::string &dir): KVStoreAPI(dir)
 
 KVStore::~KVStore()
 {
+    if(memTable->length() > 0)
+        memTable->save2SSTable(dataDir + "/level-0", currentTime++);
     delete memTable;
+    compact();
 }
 
 /**
@@ -65,6 +70,8 @@ void KVStore::put(uint64_t key, const std::string &s)
         return;
     }
     cache[0].push_back(memTable->save2SSTable(dataDir + "/level-0", currentTime++));
+    delete memTable;
+    memTable = new SkipList;
     // make sure the timeStamp of cache is decending
     std::sort(cache[0].begin(), cache[0].end(), timeCmp);
     compact();
@@ -77,20 +84,49 @@ void KVStore::put(uint64_t key, const std::string &s)
 std::string KVStore::get(uint64_t key)
 {
     std::string *val = memTable->get(key);
-    if(val)
+    if(val) {
+        if(*val == "~DELETED~")
+            return "";
         return *val;
+    }
     // cannot find in memTable, try to find in SSTables
-    std::string result;
     int levelNum = cache.size();
     for(int i = 0; i < levelNum; ++i) {
         // find keys in SSTableCaches, from the one with biggest timestamp
         for(auto it = cache[i].begin(); it != cache[i].end(); ++it) {
-            int pos = (*it)->get(key);
-            if(pos == -1)
-                continue;
-            if(pos == ((*it)->indexes).size() - 1) {
-
+            // check if the key is in the range of the sstablecache
+            if(key <= ((*it)->header).maxKey && key >= ((*it)->header).minKey) {
+                int pos = (*it)->get(key);
+                if(pos < 0)
+                    continue;
+                std::fstream file((*it)->path);
+                if(!file) {
+                    printf("Lost file: %s", ((*it)->path).c_str());
+                    exit(-1);
+                }
+                uint32_t nextOffset, length, offset = ((*it)->indexes)[pos].offset;
+                // is the last entry
+                if((unsigned long)pos == ((*it)->indexes).size() - 1) {
+                    int handle = open(((*it)->path).c_str(), 0x0100);
+                    nextOffset = filelength(handle);
+                    close(handle);
+                } else {
+                    nextOffset = ((*it)->indexes)[pos + 1].offset;
+                }
+                file.seekg(offset);
+                length = nextOffset - offset;
+                char *result = new char[length + 1];
+                result[length] = '\0';
+                file.read(result, length);
+                std::string value(result);
+                delete[] result;
+                file.close();
+                if(value == "~DELETED~")
+                    return "";
+                else
+                    return value;
             }
+
         }
     }
     return "";
@@ -101,7 +137,13 @@ std::string KVStore::get(uint64_t key)
  */
 bool KVStore::del(uint64_t key)
 {
-    return memTable->remove(key);
+    if(key == 0)
+        printf("!");
+    std::string val = get(key);
+    if(val == "")
+        return false;
+    put(key, "~DELETED~");
+    return true;
 }
 
 /**

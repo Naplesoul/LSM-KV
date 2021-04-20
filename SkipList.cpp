@@ -53,7 +53,7 @@ std::string *SkipList::get(const uint64_t &key) const
         }
         cur = cur->down;
     }
-    if(found && cur->val != "~DELETED~")
+    if(found)
         return &(cur->val);
     else
         return nullptr;

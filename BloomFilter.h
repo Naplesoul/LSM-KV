@@ -9,9 +9,10 @@
 class BloomFilter
 {
 private:
-    std::bitset<FILTER_SIZE> bitSet;
+    std::bitset<FILTER_SIZE> *bitSet;
 public:
-    BloomFilter() {bitSet.reset();}
+    BloomFilter():bitSet(new std::bitset<FILTER_SIZE>) {bitSet->reset();}
+    BloomFilter(char *buf);
     void add(const uint64_t &key);
     bool contains(const uint64_t &key);
     void save2Buffer(char* buf);
