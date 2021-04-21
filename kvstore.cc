@@ -106,22 +106,23 @@ std::string KVStore::get(uint64_t key)
                     printf("Lost file: %s", ((*it)->path).c_str());
                     exit(-1);
                 }
-                uint32_t nextOffset, length, offset = ((*it)->indexes)[pos].offset;
-                // is the last entry
-                if((unsigned long)pos == ((*it)->indexes).size() - 1) {
-                    int handle = open(((*it)->path).c_str(), 0x0100);
-                    nextOffset = filelength(handle);
-                    close(handle);
-                } else {
-                    nextOffset = ((*it)->indexes)[pos + 1].offset;
-                }
+
+                std::string value;
+                uint32_t length, offset = ((*it)->indexes)[pos].offset;
                 file.seekg(offset);
-                length = nextOffset - offset;
-                char *result = new char[length + 1];
-                result[length] = '\0';
-                file.read(result, length);
-                std::string value(result);
-                delete[] result;
+
+                // check if it is the last entry
+                if((unsigned long)pos == ((*it)->indexes).size() - 1) {
+                    file >> value;
+                } else {
+                    uint32_t nextOffset = ((*it)->indexes)[pos + 1].offset;
+                    length = nextOffset - offset;
+                    char *result = new char[length + 1];
+                    result[length] = '\0';
+                    file.read(result, length);
+                    value = result;
+                    delete[] result;
+                }
                 file.close();
                 if(value == "~DELETED~")
                     return "";

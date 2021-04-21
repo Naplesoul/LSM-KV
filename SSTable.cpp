@@ -1,7 +1,6 @@
 #include "SSTable.h"
 #include <fstream>
 #include <iostream>
-#include <io.h>
 
 SSTable::SSTable(Node* head)
 {
