@@ -25,28 +25,33 @@ SSTable::SSTable(Node* head)
 SSTableCache::SSTableCache(const std::string &dir)
 {
     path = dir;
-    bloomFilter = new BloomFilter();
-    std::fstream file(dir);
-
+    std::ifstream file(dir, std::ios::binary);
+    if(!file) {
+        printf("Fail to open file %s", dir.c_str());
+        exit(-1);
+    }
     // load header
-    char *buf8 = new char[8];
-    file.read(buf8, 8);
-    header.timeStamp = *(uint64_t*)buf8;
-    file.read(buf8, 8);
-    uint64_t length = *(uint64_t*)buf8;
-    header.size = length;
-    file.read(buf8, 8);
-    header.minKey = *(uint64_t*)buf8;
-    file.read(buf8, 8);
-    header.maxKey = *(uint64_t*)buf8;
+    file.read((char*)&header.timeStamp, 8);
+    file.read((char*)&header.size, 8);
+    uint64_t length = header.size;
+    file.read((char*)&header.minKey, 8);
+    file.read((char*)&header.maxKey, 8);
 
     // load bloom filter
     char *filterBuf = new char[FILTER_SIZE/8];
     file.read(filterBuf, FILTER_SIZE/8);
+    bloomFilter = new BloomFilter(filterBuf);
 
 
     char *indexBuf = new char[length * 12];
     file.read(indexBuf, length * 12);
+    for(uint32_t i = 0; i < length; ++i) {
+        indexes.push_back(Index(*(uint64_t*)(indexBuf + 12*i), *(uint32_t*)(indexBuf + 12*i + 8)));
+    }
+
+    delete[] filterBuf;
+    delete[] indexBuf;
+    file.close();
 
 }
 

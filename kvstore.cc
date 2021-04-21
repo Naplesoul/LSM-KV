@@ -99,7 +99,7 @@ std::string KVStore::get(uint64_t key)
                 int pos = (*it)->get(key);
                 if(pos < 0)
                     continue;
-                std::fstream file((*it)->path);
+                std::ifstream file((*it)->path, std::ios::binary);
                 if(!file) {
                     printf("Lost file: %s", ((*it)->path).c_str());
                     exit(-1);
