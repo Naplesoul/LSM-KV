@@ -11,7 +11,6 @@ private:
     SkipList *memTable;
     std::vector<std::vector<SSTableCache*>> cache;
     uint64_t currentTime;
-    std::vector<uint32_t> tableCount;
     std::string dataDir;
 
     void saveMemTable();

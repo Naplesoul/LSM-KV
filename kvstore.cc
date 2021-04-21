@@ -28,7 +28,6 @@ KVStore::KVStore(const std::string &dir): KVStoreAPI(dir)
                     std::string levelDir = dataDir + "/" + levelName;
                     std::vector<std::string> tableNames;
                     int tableNum = utils::scanDir(levelDir, tableNames);
-                    tableCount.push_back(tableNum);
 
                     for(int j = 0; j < tableNum; ++j) {
                         SSTableCache* curCache = new SSTableCache(levelDir + "/" + tableNames[j]);
@@ -42,6 +41,9 @@ KVStore::KVStore(const std::string &dir): KVStoreAPI(dir)
                 } else
                     break;
             }
+        } else {
+            utils::mkdir((dataDir + "/level-0").c_str());
+            cache.push_back(std::vector<SSTableCache*>());
         }
     } else {
         utils::mkdir(dataDir.c_str());
