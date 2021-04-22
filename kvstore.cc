@@ -59,6 +59,10 @@ KVStore::~KVStore()
         memTable->save2SSTable(dataDir + "/level-0", currentTime++);
     delete memTable;
     compact();
+    for(auto it1 = cache.begin(); it1 != cache.end(); ++it1) {
+        for(auto it2 = (*it1).begin(); it2 != (*it1).end(); ++it2)
+            delete (*it2);
+    }
 }
 
 /**

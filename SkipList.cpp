@@ -149,12 +149,13 @@ SSTableCache *SkipList::save2SSTable(const std::string &dir, const uint64_t &cur
         index += 4;
 
         (cache->indexes).push_back(Index(cur->key, offset));
-        uint32_t newOffset = offset + (cur->val).size();
+        uint32_t strLen = (cur->val).size();
+        uint32_t newOffset = offset + strLen;
         if(newOffset > listSize) {
             printf("Buffer Overflow!!!\n");
             exit(-1);
         }
-        strcpy(buffer + offset, (cur->val).c_str());
+        memcpy(buffer + offset, (cur->val).c_str(), strLen);
         offset = newOffset;
         if(cur->right)
             cur = cur->right;

@@ -63,35 +63,29 @@ SSTable SSTable::merge2(SSTable &a, SSTable &b)
     while(!a.entries.empty() && !b.entries.empty()) {
         uint64_t aKey = a.entries.front().key, bKey = b.entries.front().key;
         if(aKey > bKey) {
-            if(b.entries.front().val != "~DELETED~")
-                result.entries.push_back(b.entries.front());
+            result.entries.push_back(b.entries.front());
             b.entries.pop_front();
         } else if(aKey < bKey) {
-            if(a.entries.front().val != "~DELETED~")
-                result.entries.push_back(a.entries.front());
+            result.entries.push_back(a.entries.front());
             a.entries.pop_front();
         } else {
             if(aPriority) {
-                if(a.entries.front().val != "~DELETED~")
-                    result.entries.push_back(a.entries.front());
+                result.entries.push_back(a.entries.front());
                 a.entries.pop_front();
                 b.entries.pop_front();
             } else {
-                if(b.entries.front().val != "~DELETED~")
-                    result.entries.push_back(b.entries.front());
+                result.entries.push_back(b.entries.front());
                 a.entries.pop_front();
                 b.entries.pop_front();
             }
         }
     }
     while(!a.entries.empty()){
-        if(a.entries.front().val != "~DELETED~")
-            result.entries.push_back(a.entries.front());
+        result.entries.push_back(a.entries.front());
         a.entries.pop_front();
     }
     while(!b.entries.empty()){
-        if(b.entries.front().val != "~DELETED~")
-            result.entries.push_back(b.entries.front());
+        result.entries.push_back(b.entries.front());
         b.entries.pop_front();
     }
     return result;
@@ -149,12 +143,13 @@ SSTableCache *SSTable::saveSingle(const std::string &dir, const uint64_t &curren
         index += 4;
 
         (cache->indexes).push_back(Index((*it).key, offset));
-        uint32_t newOffset = offset + ((*it).val).size();
+        uint32_t strLen = ((*it).val).size();
+        uint32_t newOffset = offset + strLen;
         if(newOffset > size) {
             printf("Buffer Overflow!!!\n");
             exit(-1);
         }
-        strcpy(buffer + offset, ((*it).val).c_str());
+        memcpy(buffer + offset, ((*it).val).c_str(), strLen);
         offset = newOffset;
     }
 

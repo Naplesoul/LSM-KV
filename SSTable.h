@@ -17,6 +17,8 @@ public:
     BloomFilter *bloomFilter;
     std::vector<Index> indexes;
     std::string path;
+
+    ~SSTableCache(){delete bloomFilter;}
     SSTableCache(): bloomFilter(new BloomFilter()) {}
     SSTableCache(const std::string &dir);
 
