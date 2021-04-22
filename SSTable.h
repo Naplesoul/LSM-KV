@@ -5,23 +5,9 @@
 #include "DataStructs.h"
 #include <string>
 #include <vector>
+#include <list>
 
-
-class SSTable
-{
-private:
-    Header header;
-    BloomFilter *bloomFilter;
-    std::vector<Index> indexes;
-    std::vector<std::string> values;
-public:
-    SSTable(): bloomFilter(new BloomFilter()) {}
-    SSTable(Node* head);
-
-    bool load(const std::string &dir);
-    bool save(const std::string &dir);
-    static std::vector<SSTable*> merge(const std::vector<SSTable*> &tables);
-};
+#define MAX_TABLE_SIZE 2097152
 
 
 class SSTableCache
@@ -38,7 +24,28 @@ public:
     int find(const uint64_t &key, int start, int end);
 };
 
-bool timeCmp(SSTableCache *a, SSTableCache *b);
+class SSTable
+{
+public:
+    uint64_t timeStamp;
+    std::string path;
+    uint64_t size;
+    uint64_t length;
+    std::list<Entry> entries;
 
+
+    SSTable(SSTableCache *cache);
+    SSTable(): size(10272), length(0) {}
+    static void merge(std::vector<SSTable> &tables);
+    static SSTable merge2(SSTable &a, SSTable &b);
+
+    std::vector<SSTableCache*> save(const std::string &dir, uint64_t &currentTime);
+    SSTableCache *saveSingle(const std::string &dir, const uint64_t &currentTime);
+
+    void add(const Entry &entry);
+};
+
+bool cacheTimeCompare(SSTableCache *a, SSTableCache *b);
+bool tableTimeCompare(SSTable &a, SSTable &b);
 
 #endif // SSTABLE_H

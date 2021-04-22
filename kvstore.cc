@@ -5,7 +5,6 @@
 #include <fstream>
 #include <iostream>
 
-#define MAX_TABLE_SIZE 2097152
 
 KVStore::KVStore(const std::string &dir): KVStoreAPI(dir)
 {
@@ -37,7 +36,7 @@ KVStore::KVStore(const std::string &dir): KVStoreAPI(dir)
                             currentTime = curTime;
                     }
                     // make sure the timeStamp of cache is decending
-                    std::sort(cache[i].begin(), cache[i].end(), timeCmp);
+                    std::sort(cache[i].begin(), cache[i].end(), cacheTimeCompare);
                 } else
                     break;
             }
@@ -48,6 +47,7 @@ KVStore::KVStore(const std::string &dir): KVStoreAPI(dir)
     } else {
         utils::mkdir(dataDir.c_str());
         utils::mkdir((dataDir + "/level-0").c_str());
+        cache.push_back(std::vector<SSTableCache*>());
     }
     currentTime++;
     memTable = new SkipList();
@@ -75,7 +75,7 @@ void KVStore::put(uint64_t key, const std::string &s)
     delete memTable;
     memTable = new SkipList;
     // make sure the timeStamp of cache is decending
-    std::sort(cache[0].begin(), cache[0].end(), timeCmp);
+    std::sort(cache[0].begin(), cache[0].end(), cacheTimeCompare);
     compact();
     memTable->put(key, s);
 }
@@ -161,5 +161,54 @@ void KVStore::reset()
 
 void KVStore::compact()
 {
+    uint64_t levelMax = 1;
+    uint32_t levelNum = cache.size();
+    for(uint32_t i = 0; i < levelNum; ++i) {
+        levelMax *= 2;
+        if(cache[i].size() > levelMax)
+            compactLevel(i);
+        else
+            break;
+    }
+}
 
+void KVStore::compactLevel(uint32_t level)
+{
+    uint64_t minKey = -1, maxKey = 0;
+
+    std::vector<SSTable> tables2Compact;
+    for(auto it = cache[level].begin(); it != cache[level].end(); ++it) {
+        if(((*it)->header).maxKey > maxKey)
+            maxKey = ((*it)->header).maxKey;
+        if(((*it)->header).minKey > minKey)
+            minKey = ((*it)->header).minKey;
+        tables2Compact.push_back(SSTable(*it));
+    }
+    cache[level].clear();
+
+    // check if the next level does not exist
+    if(++level < cache.size()) {
+        for(auto it = cache[level].begin(); it != cache[level].end();) {
+            if(     (((*it)->header).maxKey > maxKey && ((*it)->header).minKey < maxKey)
+                    || (((*it)->header).minKey < minKey && ((*it)->header).maxKey > minKey)
+                    || (((*it)->header).maxKey > maxKey && ((*it)->header).minKey < minKey)
+                    || (((*it)->header).maxKey < maxKey && ((*it)->header).minKey > minKey) ) {
+                tables2Compact.push_back(SSTable(*it));
+                it = cache[level].erase(it);
+            } else
+                ++it;
+        }
+    } else {
+        utils::mkdir((dataDir + "/level-" + std::to_string(level)).c_str());
+        cache.push_back(std::vector<SSTableCache*>());
+    }
+    for(auto it = tables2Compact.begin(); it != tables2Compact.end(); ++it)
+        utils::rmfile((*it).path.c_str());
+    sort(tables2Compact.begin(), tables2Compact.end(), tableTimeCompare);
+    SSTable::merge(tables2Compact);
+    std::vector<SSTableCache*> newCaches = tables2Compact[0].save(dataDir + "/level-" + std::to_string(level), currentTime);
+    for(auto it = newCaches.begin(); it != newCaches.end(); ++it) {
+        cache[level].push_back(*it);
+    }
+    std::sort(cache[level].begin(), cache[level].end(), cacheTimeCompare);
 }

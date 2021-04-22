@@ -13,8 +13,9 @@ private:
     uint64_t currentTime;
     std::string dataDir;
 
-    void saveMemTable();
     void compact();
+    void compactLevel(uint32_t level);
+    void saveMemTable();
 public:
 	KVStore(const std::string &dir);
 
@@ -27,5 +28,4 @@ public:
 	bool del(uint64_t key) override;
 
 	void reset() override;
-
 };

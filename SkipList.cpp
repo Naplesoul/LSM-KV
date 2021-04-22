@@ -171,5 +171,6 @@ SSTableCache *SkipList::save2SSTable(const std::string &dir, const uint64_t &cur
     outFile.write(buffer, listSize);
 
     delete[] buffer;
+    outFile.close();
     return cache;
 }

@@ -1,24 +1,175 @@
 #include "SSTable.h"
 #include <fstream>
 #include <iostream>
+#include <string.h>
 
-SSTable::SSTable(Node* head)
+SSTable::SSTable(SSTableCache *cache)
 {
-    uint32_t offset = 0;
-    Node *cur = head;
-    bloomFilter = new BloomFilter();
-    while(cur) {
-        uint64_t key = cur->key;
-        if(key > header.maxKey)
-           header.maxKey = key;
-        if(key < header.minKey)
-           header.minKey = key;
-        bloomFilter->add(key);
-        indexes.push_back(Index(key, offset));
-        values.push_back(cur->val);
-        offset += (cur->val).size() + 1;
-        cur = cur->right;
+    path = cache->path;
+    std::ifstream file(path, std::ios::binary);
+    if(!file) {
+        printf("Fail to open file %s", path.c_str());
+        exit(-1);
     }
+    timeStamp = (cache->header).timeStamp;
+    size = (cache->header).size;
+
+    // load from files
+    file.seekg((cache->indexes)[0].offset);
+    for(auto it = (cache->indexes).begin();;) {
+        uint64_t key = (*it).key;
+        uint32_t offset = (*it).offset;
+        std::string val;
+        if(++it == (cache->indexes).end()) {
+            file >> val;
+            entries.push_back(Entry(key, val));
+            break;
+        } else {
+            uint32_t length = (*it).offset - offset;
+            char *buf = new char[length + 1];
+            buf[length] = '\0';
+            file.read(buf, length);
+            val = buf;
+            delete[] buf;
+            entries.push_back(Entry(key, val));
+        }
+    }
+
+    delete cache;
+}
+
+void SSTable::merge(std::vector<SSTable> &tables)
+{
+    uint32_t size = tables.size();
+    if(size == 1)
+        return;
+    uint32_t group = size/2;
+    std::vector<SSTable> next;
+    for(uint32_t i = 0; i < group; ++i) {
+        next.push_back(merge2(tables[2*i], tables[2*i + 1]));
+    }
+    if(size % 2 == 1)
+        next.push_back(tables[size - 1]);
+    merge(next);
+    tables = next;
+}
+
+SSTable SSTable::merge2(SSTable &a, SSTable &b)
+{
+    uint64_t aTime = a.timeStamp, bTime = b.timeStamp;
+    bool aPriority = aTime > bTime;
+    SSTable result;
+    result.timeStamp = aPriority ? aTime : bTime;
+    while(!a.entries.empty() && !b.entries.empty()) {
+        uint64_t aKey = a.entries.front().key, bKey = b.entries.front().key;
+        if(aKey > bKey) {
+            if(b.entries.front().val != "~DELETED~")
+                result.entries.push_back(b.entries.front());
+            b.entries.pop_front();
+        } else if(aKey < bKey) {
+            if(a.entries.front().val != "~DELETED~")
+                result.entries.push_back(a.entries.front());
+            a.entries.pop_front();
+        } else {
+            if(aPriority) {
+                if(a.entries.front().val != "~DELETED~")
+                    result.entries.push_back(a.entries.front());
+                a.entries.pop_front();
+                b.entries.pop_front();
+            } else {
+                if(b.entries.front().val != "~DELETED~")
+                    result.entries.push_back(b.entries.front());
+                a.entries.pop_front();
+                b.entries.pop_front();
+            }
+        }
+    }
+    while(!a.entries.empty()){
+        if(a.entries.front().val != "~DELETED~")
+            result.entries.push_back(a.entries.front());
+        a.entries.pop_front();
+    }
+    while(!b.entries.empty()){
+        if(b.entries.front().val != "~DELETED~")
+            result.entries.push_back(b.entries.front());
+        b.entries.pop_front();
+    }
+    return result;
+}
+
+std::vector<SSTableCache*> SSTable::save(const std::string &dir, uint64_t &currentTime)
+{
+    std::vector<SSTableCache*> caches;
+    SSTable newTable;
+    while(!entries.empty()) {
+        if(newTable.size + 12 + entries.front().val.size() >= MAX_TABLE_SIZE) {
+            caches.push_back(newTable.saveSingle(dir, currentTime++));
+            newTable = SSTable();
+        }
+        newTable.add(entries.front());
+        entries.pop_front();
+    }
+    if(newTable.length > 0) {
+        caches.push_back(newTable.saveSingle(dir, currentTime++));
+    }
+    return caches;
+}
+
+void SSTable::add(const Entry &entry)
+{
+    size += 12 + entry.val.size();
+    length++;
+    entries.push_back(entry);
+}
+
+SSTableCache *SSTable::saveSingle(const std::string &dir, const uint64_t &currentTime)
+{
+    SSTableCache *cache = new SSTableCache;
+
+    char *buffer = new char[size];
+    BloomFilter *filter = cache->bloomFilter;
+
+    *(uint64_t*)buffer = currentTime;
+    (cache->header).timeStamp = currentTime;
+
+    *(uint64_t*)(buffer + 8) = length;
+    (cache->header).size = length;
+
+    *(uint64_t*)(buffer + 16) = entries.front().key;
+    (cache->header).minKey = entries.front().key;
+
+    char *index = buffer + 10272;
+    uint32_t offset = 10272 + length * 12;
+
+    for(auto it = entries.begin(); it != entries.end(); ++it) {
+        filter->add((*it).key);
+        *(uint64_t*)index = (*it).key;
+        index += 8;
+        *(uint32_t*)index = offset;
+        index += 4;
+
+        (cache->indexes).push_back(Index((*it).key, offset));
+        uint32_t newOffset = offset + ((*it).val).size();
+        if(newOffset > size) {
+            printf("Buffer Overflow!!!\n");
+            exit(-1);
+        }
+        strcpy(buffer + offset, ((*it).val).c_str());
+        offset = newOffset;
+    }
+
+    *(uint64_t*)(buffer + 24) = entries.back().key;
+    (cache->header).maxKey = entries.back().key;
+    filter->save2Buffer(buffer + 32);
+
+    std::string filename = dir + "/" + std::to_string(currentTime) + ".sst";
+    cache->path = filename;
+    std::ofstream outFile(filename, std::ios::binary | std::ios::out);
+    outFile.write(buffer, size);
+
+    delete[] buffer;
+    outFile.close();
+    return cache;
 }
 
 SSTableCache::SSTableCache(const std::string &dir)
@@ -80,7 +231,12 @@ int SSTableCache::find(const uint64_t &key, int start, int end)
         return find(key, start, mid - 1);
 }
 
-bool timeCmp(SSTableCache *a, SSTableCache *b)
+bool cacheTimeCompare(SSTableCache *a, SSTableCache *b)
 {
     return (a->header).timeStamp > (b->header).timeStamp;
+}
+
+bool tableTimeCompare(SSTable &a, SSTable &b)
+{
+    return a.timeStamp > b.timeStamp;
 }

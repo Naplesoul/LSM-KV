@@ -72,6 +72,7 @@ namespace utils{
                 ret.push_back(s);
             }   
         }
+//        closedir(dir);
         return ret.size();
     }
     #endif
