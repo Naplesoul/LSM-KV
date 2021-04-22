@@ -60,7 +60,7 @@ FORCE_INLINE uint64_t fmix64 ( uint64_t k )
   unsigned int hash[4] = {0};
   MurmurHash3_x64_128(&key, sizeof(key), 1, hash);
 */
-void MurmurHash3_x64_128 ( const void * key, const int len,
+static inline void MurmurHash3_x64_128 ( const void * key, const int len,
                            const uint32_t seed, void * out )
 {
   const uint8_t * data = (const uint8_t*)key;
