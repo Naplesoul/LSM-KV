@@ -181,6 +181,7 @@ void KVStore::compactLevel(uint32_t level)
     uint64_t minKey = -1, maxKey = 0;
 
     std::vector<SSTable> tables2Compact;
+    uint32_t size = cache[level].size();
     for(auto it = cache[level].begin(); it != cache[level].end(); ++it) {
         if(((*it)->header).maxKey > maxKey)
             maxKey = ((*it)->header).maxKey;
@@ -210,7 +211,7 @@ void KVStore::compactLevel(uint32_t level)
         utils::rmfile((*it).path.c_str());
     sort(tables2Compact.begin(), tables2Compact.end(), tableTimeCompare);
     SSTable::merge(tables2Compact);
-    std::vector<SSTableCache*> newCaches = tables2Compact[0].save(dataDir + "/level-" + std::to_string(level), currentTime);
+    std::vector<SSTableCache*> newCaches = tables2Compact[0].save(dataDir + "/level-" + std::to_string(level));
     for(auto it = newCaches.begin(); it != newCaches.end(); ++it) {
         cache[level].push_back(*it);
     }

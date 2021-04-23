@@ -41,8 +41,8 @@ public:
     static void merge(std::vector<SSTable> &tables);
     static SSTable merge2(SSTable &a, SSTable &b);
 
-    std::vector<SSTableCache*> save(const std::string &dir, uint64_t &currentTime);
-    SSTableCache *saveSingle(const std::string &dir, const uint64_t &currentTime);
+    std::vector<SSTableCache*> save(const std::string &dir);
+    SSTableCache *saveSingle(const std::string &dir, const uint64_t &currentTime, const uint64_t &num);
 
     void add(const Entry &entry);
 };

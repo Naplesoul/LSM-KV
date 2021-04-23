@@ -91,20 +91,21 @@ SSTable SSTable::merge2(SSTable &a, SSTable &b)
     return result;
 }
 
-std::vector<SSTableCache*> SSTable::save(const std::string &dir, uint64_t &currentTime)
+std::vector<SSTableCache*> SSTable::save(const std::string &dir)
 {
     std::vector<SSTableCache*> caches;
     SSTable newTable;
+    uint64_t num = 0;
     while(!entries.empty()) {
         if(newTable.size + 12 + entries.front().val.size() >= MAX_TABLE_SIZE) {
-            caches.push_back(newTable.saveSingle(dir, currentTime++));
+            caches.push_back(newTable.saveSingle(dir, timeStamp, num++));
             newTable = SSTable();
         }
         newTable.add(entries.front());
         entries.pop_front();
     }
     if(newTable.length > 0) {
-        caches.push_back(newTable.saveSingle(dir, currentTime++));
+        caches.push_back(newTable.saveSingle(dir, timeStamp, num));
     }
     return caches;
 }
@@ -116,7 +117,7 @@ void SSTable::add(const Entry &entry)
     entries.push_back(entry);
 }
 
-SSTableCache *SSTable::saveSingle(const std::string &dir, const uint64_t &currentTime)
+SSTableCache *SSTable::saveSingle(const std::string &dir, const uint64_t &currentTime, const uint64_t &num)
 {
     SSTableCache *cache = new SSTableCache;
 
@@ -157,7 +158,7 @@ SSTableCache *SSTable::saveSingle(const std::string &dir, const uint64_t &curren
     (cache->header).maxKey = entries.back().key;
     filter->save2Buffer(buffer + 32);
 
-    std::string filename = dir + "/" + std::to_string(currentTime) + ".sst";
+    std::string filename = dir + "/" + std::to_string(currentTime) + "-" + std::to_string(num) + ".sst";
     cache->path = filename;
     std::ofstream outFile(filename, std::ios::binary | std::ios::out);
     outFile.write(buffer, size);
