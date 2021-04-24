@@ -123,7 +123,6 @@ Node *SkipList::getListHead()
 
 SSTableCache *SkipList::save2SSTable(const std::string &dir, const uint64_t &currentTime)
 {
-
     SSTableCache *cache = new SSTableCache;
 
     Node *cur = getListHead();

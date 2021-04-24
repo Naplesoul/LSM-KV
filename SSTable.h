@@ -49,5 +49,6 @@ public:
 
 bool cacheTimeCompare(SSTableCache *a, SSTableCache *b);
 bool tableTimeCompare(SSTable &a, SSTable &b);
+bool haveIntersection(const SSTableCache *cache, const std::vector<Range> &ranges);
 
 #endif // SSTABLE_H

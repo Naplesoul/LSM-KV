@@ -12,7 +12,7 @@ SSTable::SSTable(SSTableCache *cache)
         exit(-1);
     }
     timeStamp = (cache->header).timeStamp;
-    size = (cache->header).size;
+    length = (cache->header).size;
 
     // load from files
     file.seekg((cache->indexes)[0].offset);
@@ -56,11 +56,9 @@ void SSTable::merge(std::vector<SSTable> &tables)
 
 SSTable SSTable::merge2(SSTable &a, SSTable &b)
 {
-    uint64_t aTime = a.timeStamp, bTime = b.timeStamp;
-    bool aPriority = aTime > bTime;
     SSTable result;
-    result.timeStamp = aPriority ? aTime : bTime;
-    while(!a.entries.empty() && !b.entries.empty()) {
+    result.timeStamp = a.timeStamp;
+    while((!a.entries.empty()) && (!b.entries.empty())) {
         uint64_t aKey = a.entries.front().key, bKey = b.entries.front().key;
         if(aKey > bKey) {
             result.entries.push_back(b.entries.front());
@@ -69,15 +67,9 @@ SSTable SSTable::merge2(SSTable &a, SSTable &b)
             result.entries.push_back(a.entries.front());
             a.entries.pop_front();
         } else {
-            if(aPriority) {
-                result.entries.push_back(a.entries.front());
-                a.entries.pop_front();
-                b.entries.pop_front();
-            } else {
-                result.entries.push_back(b.entries.front());
-                a.entries.pop_front();
-                b.entries.pop_front();
-            }
+            result.entries.push_back(a.entries.front());
+            a.entries.pop_front();
+            b.entries.pop_front();
         }
     }
     while(!a.entries.empty()){
@@ -235,4 +227,15 @@ bool cacheTimeCompare(SSTableCache *a, SSTableCache *b)
 bool tableTimeCompare(SSTable &a, SSTable &b)
 {
     return a.timeStamp > b.timeStamp;
+}
+
+bool haveIntersection(const SSTableCache *cache, const std::vector<Range> &ranges)
+{
+    uint64_t min = (cache->header).minKey, max = (cache->header).maxKey;
+    for(auto it = ranges.begin(); it != ranges.end(); ++it) {
+        if(!(((*it).max < min) || ((*it).min > max))) {
+            return true;
+        }
+    }
+    return false;
 }

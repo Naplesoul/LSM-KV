@@ -144,8 +144,6 @@ std::string KVStore::get(uint64_t key)
  */
 bool KVStore::del(uint64_t key)
 {
-    if(key == 0)
-        printf("!");
     std::string val = get(key);
     if(val == "")
         return false;
@@ -161,6 +159,15 @@ void KVStore::reset()
 {
     delete memTable;
     memTable = new SkipList();
+    for(auto it1 = cache.begin(); it1 != cache.end(); ++it1) {
+        for(auto it2 = (*it1).begin(); it2 != (*it1).end(); ++it2)
+            delete (*it2);
+    }
+    cache.clear();
+    utils::rmdir(dataDir.c_str());
+    utils::mkdir(dataDir.c_str());
+    utils::mkdir((dataDir + "/level-0").c_str());
+    cache.push_back(std::vector<SSTableCache*>());
 }
 
 void KVStore::compact()
@@ -178,30 +185,47 @@ void KVStore::compact()
 
 void KVStore::compactLevel(uint32_t level)
 {
-    uint64_t minKey = -1, maxKey = 0;
-
+    std::vector<Range> levelRange;
     std::vector<SSTable> tables2Compact;
-    uint32_t size = cache[level].size();
-    for(auto it = cache[level].begin(); it != cache[level].end(); ++it) {
-        if(((*it)->header).maxKey > maxKey)
-            maxKey = ((*it)->header).maxKey;
-        if(((*it)->header).minKey > minKey)
-            minKey = ((*it)->header).minKey;
-        tables2Compact.push_back(SSTable(*it));
-    }
-    cache[level].clear();
 
-    // check if the next level does not exist
-    if(++level < cache.size()) {
+    // compact all SSTables in level-0
+    if(level == 0) {
+        for(auto it = cache[level].begin(); it != cache[level].end(); ++it) {
+            levelRange.push_back(Range(((*it)->header).minKey, ((*it)->header).maxKey));
+            tables2Compact.push_back(SSTable(*it));
+        }
+        cache[level].clear();
+    } else {
+
+        uint64_t mid = 1 << level;
+        auto it = cache[level].begin();
+        for(uint64_t i = 0; i < mid; ++i)
+            ++it;
+        uint64_t newestTime = ((*it)->header).timeStamp;
+        while(it != cache[level].begin()) {
+            if(((*it)->header).timeStamp > newestTime)
+                break;
+            --it;
+        }
+        if(((*it)->header).timeStamp > newestTime)
+            ++it;
+        while(it != cache[level].end()) {
+            levelRange.push_back(Range(((*it)->header).minKey, ((*it)->header).maxKey));
+            tables2Compact.push_back(SSTable(*it));
+            it = cache[level].erase(it);
+        }
+    }
+
+    // check if the next level exists
+    ++level;
+    if(level < cache.size()) {
         for(auto it = cache[level].begin(); it != cache[level].end();) {
-            if(     (((*it)->header).maxKey > maxKey && ((*it)->header).minKey < maxKey)
-                    || (((*it)->header).minKey < minKey && ((*it)->header).maxKey > minKey)
-                    || (((*it)->header).maxKey > maxKey && ((*it)->header).minKey < minKey)
-                    || (((*it)->header).maxKey < maxKey && ((*it)->header).minKey > minKey) ) {
+            if(haveIntersection(*it, levelRange)) {
                 tables2Compact.push_back(SSTable(*it));
                 it = cache[level].erase(it);
-            } else
+            } else {
                 ++it;
+            }
         }
     } else {
         utils::mkdir((dataDir + "/level-" + std::to_string(level)).c_str());

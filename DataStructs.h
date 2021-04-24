@@ -27,12 +27,19 @@ struct Index
 };
 
 
-struct Node{
+struct Node
+{
     Node *right, *down;   //向右向下足矣
     uint64_t key;
     std::string val;
     Node(Node *right, Node *down, uint64_t key, std::string val): right(right), down(down), key(key), val(val){}
     Node(): right(nullptr), down(nullptr) {}
+};
+
+struct Range
+{
+    uint64_t min, max;
+    Range(const uint64_t &i, const uint64_t &a): min(i), max(a) {}
 };
 
 
