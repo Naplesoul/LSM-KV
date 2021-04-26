@@ -11,7 +11,7 @@
 #include <io.h>
 #include <windows.h>
 #endif
-#if defined(linux) || defined(__MINGW32__) || defined(__APPLE__)
+#if defined(__linux__) || defined(__MINGW32__) || defined(__APPLE__)
 #include <dirent.h>
 #include <unistd.h>
 #endif
@@ -61,7 +61,7 @@ namespace utils{
         return ret.size();
     }
     #endif
-    #if defined(linux) || defined(__MINGW32__) || defined(__APPLE__)
+    #if defined(__linux__) || defined(__MINGW32__) || defined(__APPLE__)
     static inline int scanDir(std::string path, std::vector<std::string> &ret){
         DIR *dir;
         struct dirent *rent;
