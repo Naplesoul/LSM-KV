@@ -195,8 +195,8 @@ SSTableCache::SSTableCache(const std::string &dir)
 
 int SSTableCache::get(const uint64_t &key)
 {
-    if(!bloomFilter->contains(key))
-        return -1;
+//    if(!bloomFilter->contains(key))
+//        return -1;
     return find(key, 0, indexes.size() - 1);
 }
 

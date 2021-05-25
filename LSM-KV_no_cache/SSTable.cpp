@@ -195,8 +195,8 @@ SSTableCache::SSTableCache(const std::string &dir)
 
 int SSTableCache::get(const uint64_t &key)
 {
-    if(!bloomFilter->contains(key))
-        return -1;
+//    if(!bloomFilter->contains(key))
+//        return -1;
     return find(key, 0, indexes.size() - 1);
 }
 
@@ -205,15 +205,25 @@ int SSTableCache::find(const uint64_t &key, int start, int end)
     if(start > end)
         return -1;
     if(start == end) {
-        if(indexes[start].key == key)
+        std::ifstream in(path, std::ios::binary);
+        in.seekg(10272 + start * 12);
+        uint64_t curKey;
+        in.read((char *)&curKey, 8);
+        in.close();
+        if(curKey == key)
             return start;
         else
             return -1;
     }
     int mid = (start + end) / 2;
-    if(indexes[mid].key == key)
+    std::ifstream in(path, std::ios::binary);
+    in.seekg(10272 + mid * 12);
+    uint64_t curKey;
+    in.read((char *)&curKey, 8);
+    in.close();
+    if(curKey == key)
         return mid;
-    else if(indexes[mid].key < key)
+    else if(curKey < key)
         return find(key, mid + 1, end);
     else
         return find(key, start, mid - 1);

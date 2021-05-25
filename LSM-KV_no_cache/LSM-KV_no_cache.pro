@@ -12,7 +12,8 @@ SOURCES += \
         SSTable.cpp \
         SkipList.cpp \
         kvstore.cc \
-        correctness.cc
+        correctness.cc \
+        performance.cpp
 
 
 # Default rules for deployment.
