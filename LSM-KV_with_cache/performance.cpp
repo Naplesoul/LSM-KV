@@ -11,14 +11,14 @@ int main(int argc, char *argv[])
     LARGE_INTEGER startTime;
     LARGE_INTEGER endTime;
     double runTime;
-    std::ofstream out("get_no_cache.csv");
+    std::ofstream out("del_with_cache.csv");
     KVStore store("./data");
     for (uint64_t i = 0; i < 10000; ++i)
         store.put(i, std::string(10086, 'h'));
     for (uint64_t i = 0; i < 10000; ++i) {
         QueryPerformanceFrequency(&cpuFreq);
         QueryPerformanceCounter(&startTime);
-        store.get(i);
+        store.del(i);
         QueryPerformanceCounter(&endTime);
         runTime = (((endTime.QuadPart - startTime.QuadPart) * 1000000.0f) / cpuFreq.QuadPart);
         out << runTime << std::endl;
