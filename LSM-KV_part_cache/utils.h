@@ -14,6 +14,7 @@
 #if defined(__linux__) || defined(__MINGW32__) || defined(__APPLE__)
 #include <dirent.h>
 #include <unistd.h>
+#include <cstring>
 #endif
 
 namespace utils{
